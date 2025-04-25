@@ -17,6 +17,9 @@
 - **WordPress** - популярная CMS для создания веб-сайтов и блогов
   - Настроена с MariaDB для хранения данных
   - Оптимизирована для производительности и безопасности
+- **SearXNG** - приватная метапоисковая система с улучшенной безопасностью
+  - Обеспечивает конфиденциальный поиск без отслеживания пользователей
+  - Интегрируется с n8n и Flowise через защищенный API
 - **PostgreSQL** - реляционная база данных с расширением pgvector
 - **Adminer** - веб-интерфейс для управления базами данных
 - **Caddy** - веб-сервер с автоматическим получением SSL-сертификатов
@@ -91,6 +94,59 @@
 - Простая аутентификация через QR-код стандартного WhatsApp Web
 - Возможность создания сложных сценариев обработки сообщений
 - [Документация по API](https://waha.devlike.pro/docs/api-reference/overview/)
+
+### SearXNG
+[SearXNG](https://docs.searxng.org/) - это свободная метапоисковая система с открытым исходным кодом, которая агрегирует результаты из различных поисковых сервисов и баз данных:
+
+- Полная приватность поиска - пользователи не отслеживаются и не профилируются
+- Агрегация результатов из более чем 70 поисковых движков (Google, Bing, DuckDuckGo, Yandex и др.)
+- Кастомизируемый интерфейс с несколькими темами и настройками
+- Отсутствие рекламы в выдаче
+- Возможность настройки фильтров поиска, категорий и языков
+- API для интеграции с другими сервисами
+- Поддержка различных форматов вывода (JSON, CSV, RSS)
+- Специальные возможности поиска (например, поиск по изображениям, картам, новостям)
+
+#### Интеграция SearXNG с другими сервисами
+
+В нашей конфигурации SearXNG интегрирован с другими сервисами стека:
+
+1. **Интеграция с n8n**:
+   - Использование API SearXNG в рабочих процессах n8n для получения данных из интернета
+   - Позволяет создавать автоматизированные сборщики данных и мониторинг информации
+   - Работает через защищенный API-интерфейс
+
+2. **Интеграция с Flowise**:
+   - Обогащение LLM-приложений данными из интернета без компрометации приватности
+   - Создание расширяемых AI-агентов с функциями поиска в интернете
+   - Улучшение качества ответов LLM с актуальными данными
+
+#### Безопасность SearXNG в стеке
+
+В нашей реализации SearXNG настроен с улучшенной безопасностью:
+
+- **Защищенный веб-интерфейс**: Доступ к интерфейсу защищен базовой HTTP-аутентификацией
+- **Ограниченный API**: Доступ к API разрешен только для сервисов внутри стека
+- **Проверка заголовков**: Необходим специальный заголовок `X-API-Source` для валидации запросов
+- **Ограниченный CORS**: Доступ через CORS разрешен только для доменов n8n и Flowise
+
+#### API SearXNG для интеграции
+
+Основная конечная точка API для интеграции с другими сервисами:
+
+```
+https://searxng.ваш-домен.com/search
+```
+
+Параметры запроса:
+- `q`: Поисковый запрос (обязательный)
+- `format`: Формат ответа (json, csv, rss)
+- `engines`: Список поисковых движков через запятую (google,bing,duckduckgo)
+- `categories`: Категории поиска (general, images, news, videos, и т.д.)
+- `language`: Язык поиска (ru, en, и т.д.)
+- `time_range`: Временной диапазон (day, week, month, year)
+
+Дополнительные инструкции по интеграции с API можно найти в файле `/home/den/my-nocode-stack/setup-files/searxng-api-integration.md`.
 
 ### Redis
 [Redis](https://redis.io/docs/) - это высокопроизводительное хранилище данных в памяти, используемое как база данных, кэш и брокер сообщений:
@@ -791,50 +847,253 @@ return await fetchWeatherData();
 // В Function ноде:
 
 async function fetchGitHubRepos() {
-  // Запрос к GitHub API
-  const response = await $http.request({
-    url: 'https://api.github.com/users/YOUR_USERNAME/repos',
-    method: 'GET',
-    headers: {
-      'User-Agent': 'n8n-crawl4ai-integration'
-    }
-  });
-  
-  // Обрабатываем данные о репозиториях
-  const repos = response.data.map(repo => ({
-    name: repo.name,
-    description: repo.description || '',
-    url: repo.html_url,
-    stars: repo.stargazers_count,
-    language: repo.language,
-    created_at: repo.created_at,
-    updated_at: repo.updated_at
-  }));
-  
-  // Формируем данные для отправки в Crawl4AI
-  return {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + process.env.CRAWL4AI_JWT_SECRET
-    },
-    url: 'https://crawl4ai.ваш-домен.com/api/github-data',
-    method: 'POST',
-    body: JSON.stringify({
-      source: 'github_api',
-      data: repos,
-      timestamp: new Date().toISOString(),
-      // Параметры для сохранения в Qdrant через прокси Crawl4AI
-      qdrant: {
-        collection_name: 'github_repos',
-        vector_dimension: 384,  // Размерность вектора, зависит от модели эмбеддингов
-        embed_field: 'description'  // Поле, которое будет использовано для создания эмбеддингов
-      }
-    })
-  };
+  // Функция для получения репозиториев GitHub
 }
 
 return await fetchGitHubRepos();
 ```
+
+### Практическое применение SearXNG в текущей конфигурации
+
+SearXNG можно эффективно использовать в сочетании с другими сервисами стека для решения различных задач. Вот несколько практических примеров:
+
+#### 1. Создание агрегатора новостей с n8n
+
+Вы можете создать автоматизированный агрегатор новостей, который собирает информацию по определенным темам:
+
+```javascript
+// Узел Function в n8n для запроса к SearXNG API
+const topics = [
+  "искусственный интеллект",
+  "машинное обучение",
+  "нейронные сети"
+];
+
+// Для каждой темы выполняем поиск
+const results = [];
+for (const topic of topics) {
+  // Формируем запрос к SearXNG
+  const response = await $http.request({
+    url: `https://searxng.${DOMAIN_NAME}/search`,
+    method: 'GET',
+    headers: {
+      'X-API-Source': 'internal-stack'  // Обязательный заголовок для авторизации
+    },
+    qs: {
+      q: topic + " news",
+      format: 'json',
+      language: 'ru',
+      engines: 'google,bing,yandex',
+      time_range: 'day',  // Только за последние 24 часа
+      categories: 'news'  // Только новости
+    }
+  });
+  
+  // Обрабатываем результаты
+  if (response.status === 200 && response.data && response.data.results) {
+    const topResults = response.data.results
+      .slice(0, 5)  // Берем только 5 верхних результатов
+      .map(result => ({
+        title: result.title,
+        url: result.url,
+        content: result.content || "(описание недоступно)",
+        source: result.engine,
+        date: new Date().toISOString()
+      }));
+    
+    results.push({
+      topic,
+      items: topResults
+    });
+  }
+}
+
+// Возвращаем результаты для дальнейшей обработки
+return { json: { results } };
+```
+
+Полученные данные можно отправить по электронной почте, сохранить в базу данных или использовать в других рабочих процессах.
+
+#### 2. Создание AI-ассистента с доступом в интернет в Flowise
+
+Вы можете интегрировать SearXNG с LLM в Flowise для создания AI-ассистента с доступом к актуальной информации из интернета:
+
+1. **Создайте собственный инструмент (Custom Tool) в Flowise**:
+   ```javascript
+   const axios = require('axios');
+
+   module.exports = {
+     name: 'SearXNG Search',
+     description: 'Search for information on the internet using SearXNG',
+     args: {
+       query: {
+         type: 'string',
+         description: 'The search query'
+       },
+       language: {
+         type: 'string',
+         description: 'Search language (e.g., ru, en)',
+         default: 'ru'
+       }
+     },
+     handler: async ({ query, language }) => {
+       try {
+         // Выполняем поисковый запрос через SearXNG API
+         const response = await axios({
+           method: 'GET',
+           url: `https://searxng.${DOMAIN_NAME}/search`,
+           headers: {
+             'X-API-Source': 'internal-stack'
+           },
+           params: {
+             q: query,
+             format: 'json',
+             language: language,
+             engines: 'google,bing,duckduckgo'
+           }
+         });
+         
+         if (!response.data || !response.data.results || response.data.results.length === 0) {
+           return "Не найдено результатов по вашему запросу.";
+         }
+         
+         // Форматируем результаты
+         const results = response.data.results.slice(0, 3);
+         const formattedResults = results.map((result, index) => 
+           `[${index + 1}] ${result.title}\n${result.url}\n${result.content || ''}`
+         ).join('\n\n');
+         
+         return `Результаты поиска:\n\n${formattedResults}`;
+       } catch (error) {
+         return `Ошибка при поиске: ${error.message}`;
+       }
+     }
+   };
+   ```
+
+2. **Подключите этот инструмент к LLM-узлу в Flowise**, создав следующую цепочку:
+   - Начало потока: `ChatInput`
+   - Анализ запроса: `LLM` с инструкцией определить, нужен ли поиск
+   - Ветвление: `IfElse` для проверки, требуется ли поиск
+   - Поиск: Подключение созданного инструмента `SearXNG Search`
+   - Ответ с использованием данных: Еще один `LLM` для формирования ответа
+   - Финальный вывод: `ChatOutput`
+
+#### 3. Мониторинг упоминаний в интернете
+
+Вы можете создать систему мониторинга упоминаний вашей компании, продукта или персоны:
+
+```javascript
+// Узел Function в n8n для мониторинга упоминаний
+const searchTerms = [
+  "название компании",
+  "имя генерального директора",
+  "название продукта"
+];
+
+// Предыдущие результаты для сравнения
+const previousResults = $node["Get Previous Results"].json.data || [];
+const previousUrlsSet = new Set(previousResults.map(item => item.url));
+
+// Выполняем поиск для каждого термина
+const newMentions = [];
+
+for (const term of searchTerms) {
+  const response = await $http.request({
+    url: `https://searxng.${DOMAIN_NAME}/search`,
+    method: 'GET',
+    headers: {
+      'X-API-Source': 'internal-stack'
+    },
+    qs: {
+      q: term,
+      format: 'json',
+      language: 'ru',
+      time_range: 'week'
+    }
+  });
+  
+  if (response.status === 200 && response.data && response.data.results) {
+    // Проверяем, есть ли новые упоминания
+    const results = response.data.results;
+    
+    for (const result of results) {
+      if (!previousUrlsSet.has(result.url)) {
+        newMentions.push({
+          term,
+          title: result.title,
+          url: result.url,
+          content: result.content,
+          found: new Date().toISOString()
+        });
+      }
+    }
+  }
+}
+
+// Если есть новые упоминания, можно отправить уведомление
+if (newMentions.length > 0) {
+  // Здесь может быть код для отправки уведомления
+  // Например, через электронную почту или мессенджер
+}
+
+// Возвращаем новые и предыдущие упоминания для сохранения
+return {
+  json: {
+    newMentions,
+    allMentions: [...newMentions, ...previousResults]
+  }
+};
+```
+
+#### 4. Обогащение векторного хранилища Qdrant актуальными данными
+
+Вы можете использовать SearXNG для обогащения векторного хранилища Qdrant актуальными данными из интернета:
+
+```javascript
+// Узел Function в n8n для обогащения векторного хранилища
+const topic = items[0].json.topic || "искусственный интеллект";
+const number_of_results = items[0].json.number_of_results || 10;
+
+// Собираем актуальные данные через SearXNG
+const response = await $http.request({
+  url: `https://searxng.${DOMAIN_NAME}/search`,
+  method: 'GET',
+  headers: {
+    'X-API-Source': 'internal-stack'
+  },
+  qs: {
+    q: topic,
+    format: 'json',
+    language: 'ru',
+    engines: 'google,bing,duckduckgo'
+  }
+});
+
+// Обрабатываем результаты
+if (response.status !== 200 || !response.data || !response.data.results) {
+  return { json: { success: false, error: 'Не удалось получить результаты поиска' } };
+}
+
+// Извлекаем текстовые данные из результатов
+const searchResults = response.data.results.slice(0, number_of_results);
+const textData = searchResults.map(result => ({
+  id: $helper.createUUID(),
+  title: result.title,
+  url: result.url,
+  content: result.content || "",
+  source: "searxng",
+  timestamp: new Date().toISOString(),
+  topic
+}));
+
+// Теперь можно использовать OpenAI для создания эмбеддингов и загрузки в Qdrant
+// Это делается в другом узле рабочего процесса
+
+return { json: { success: true, data: textData } };
+```
+
+Эти примеры демонстрируют, как SearXNG может быть интегрирован с другими сервисами стека для создания полезных рабочих процессов и инструментов.
 
 ### Adminer
 [Adminer](https://www.adminer.org/) - легковесный инструмент для управления базами данных через веб-интерфейс:

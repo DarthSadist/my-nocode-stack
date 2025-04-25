@@ -34,6 +34,7 @@ REQUIRED_TEMPLATES=(
     "./watchtower-docker-compose.yaml.template"
     "./netdata-docker-compose.yaml.template"
     "./waha-docker-compose.yaml.template"
+    "./searxng-docker-compose.yaml.template"
     "./Caddyfile.template"
 )
 
