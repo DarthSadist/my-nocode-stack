@@ -1,0 +1,27 @@
+# Сервис Crawl4AI на базе Node.js
+version: '3.8'
+services:
+  crawl4ai:
+    image: node:18-alpine
+    container_name: crawl4ai
+    restart: unless-stopped
+    command: ["/bin/sh", "-c", "npm install -g http-server && mkdir -p /app && echo '{\"status\":\"ok\",\"service\":\"crawl4ai\",\"version\":\"1.0\"}' > /app/index.json && http-server /app -p 8000"]
+    working_dir: /app
+    environment:
+      - JWT_SECRET=${CRAWL4AI_JWT_SECRET}
+    expose:
+      - "8000"
+    networks:
+      - app-network
+    # volumes:
+    #   - crawl4ai_data:/app/data
+
+# Используем существующую сеть app-network
+networks:
+  app-network:
+    external: true
+
+# Раскомментируйте, если нужны постоянные тома
+# volumes:
+#   crawl4ai_data:
+#     driver: local

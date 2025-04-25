@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  flowise:
+    image: flowiseai/flowise
+    restart: unless-stopped
+    container_name: flowise
+    environment:
+      - PORT=3001
+      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+    volumes:
+      - flowise_data:/root/.flowise
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+
+volumes:
+  flowise_data:
+    external: true
