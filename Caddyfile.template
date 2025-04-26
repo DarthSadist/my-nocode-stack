@@ -103,7 +103,8 @@ searxng.$DOMAIN_NAME {
         # Добавляем базовую HTTP аутентификацию
         basicauth {
             # Логин/пароль будут генерироваться динамически скриптом
-            {$SEARXNG_BASICAUTH}
+            # Формат: логин пароль без кавычек
+            $SEARXNG_USERNAME $SEARXNG_PASSWORD
         }
         
         reverse_proxy searxng:8080
