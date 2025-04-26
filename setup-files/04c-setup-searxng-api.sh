@@ -34,12 +34,20 @@ if [ ! -f "/opt/searxng_settings/secret_key" ]; then
   check_success "генерация секретного ключа SearXNG"
   
   # Добавление секретного ключа в .env
-  if [ -f "/opt/.env" ]; then
+  # Сначала проверяем наличие .env в текущем каталоге (для этапа установки)
+  if [ -f "./.env" ]; then
+    echo "SEARXNG_SECRET_KEY=$SEARXNG_SECRET_KEY" | tee -a ./.env > /dev/null
+    check_success "добавление секретного ключа в .env"
+  # Затем проверяем наличие .env в /opt (для продакшена)
+  elif [ -f "/opt/.env" ]; then
     echo "SEARXNG_SECRET_KEY=$SEARXNG_SECRET_KEY" | sudo tee -a /opt/.env > /dev/null
     check_success "добавление секретного ключа в .env"
   else
-    echo "❌ Файл .env не найден"
-    exit 1
+    echo "❌ Файл .env не найден ни в текущем каталоге, ни в /opt/"
+    # Создаем .env если его нет
+    touch ./.env
+    echo "SEARXNG_SECRET_KEY=$SEARXNG_SECRET_KEY" | tee -a ./.env > /dev/null
+    check_success "создание и добавление секретного ключа в новый .env файл"
   fi
 fi
 
@@ -56,14 +64,29 @@ echo "SEARXNG_PASSWORD=$SEARXNG_PASSWORD" | sudo tee -a /opt/searxng_settings/cr
 check_success "сохранение учетных данных SearXNG"
 
 # Добавление учетных данных в .env
-if [ -f "/opt/.env" ]; then
-  echo "SEARXNG_USERNAME=$SEARXNG_USERNAME" | sudo tee -a /opt/.env > /dev/null
-  echo "SEARXNG_PASSWORD=$SEARXNG_PASSWORD" | sudo tee -a /opt/.env > /dev/null
+# Сначала проверяем наличие .env в текущем каталоге
+if [ -f "./.env" ]; then
+  echo "SEARXNG_USERNAME=$SEARXNG_USERNAME" | tee -a ./.env > /dev/null
+  echo "SEARXNG_PASSWORD=$SEARXNG_PASSWORD" | tee -a ./.env > /dev/null
   
   # Создание хеша пароля для Caddy базовой аутентификации
   # Запись в формате: логин bcrypt_хеш_пароля
   # Используем временный файл с хешем (Caddy поддерживает только bcrypt)
-  # Т..к. нет прямого способа сгенерировать bcrypt в bash, используем простой текст
+  # Т..к нет прямого способа сгенерировать bcrypt в bash, используем простой текст
+  SEARXNG_BASICAUTH="$SEARXNG_USERNAME $SEARXNG_PASSWORD"
+  echo "SEARXNG_BASICAUTH=\"$SEARXNG_BASICAUTH\"" | tee -a ./.env > /dev/null
+  check_success "добавление учетных данных в .env"
+  
+  # Добавление API заголовка для внутренних сервисов
+  SEARXNG_API_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+  echo "SEARXNG_API_KEY=$SEARXNG_API_KEY" | tee -a ./.env > /dev/null
+  check_success "добавление API ключа в .env"
+# Затем проверяем наличие .env в /opt
+elif [ -f "/opt/.env" ]; then
+  echo "SEARXNG_USERNAME=$SEARXNG_USERNAME" | sudo tee -a /opt/.env > /dev/null
+  echo "SEARXNG_PASSWORD=$SEARXNG_PASSWORD" | sudo tee -a /opt/.env > /dev/null
+  
+  # Создание хеша пароля для Caddy базовой аутентификации
   SEARXNG_BASICAUTH="$SEARXNG_USERNAME $SEARXNG_PASSWORD"
   echo "SEARXNG_BASICAUTH=\"$SEARXNG_BASICAUTH\"" | sudo tee -a /opt/.env > /dev/null
   check_success "добавление учетных данных в .env"
@@ -73,8 +96,16 @@ if [ -f "/opt/.env" ]; then
   echo "SEARXNG_API_KEY=$SEARXNG_API_KEY" | sudo tee -a /opt/.env > /dev/null
   check_success "добавление API ключа в .env"
 else
-  echo "❌ Файл .env не найден"
-  exit 1
+  echo "❌ Файл .env не найден ни в текущем каталоге, ни в /opt/"
+  # Создаем .env если его нет
+  touch ./.env
+  echo "SEARXNG_USERNAME=$SEARXNG_USERNAME" | tee -a ./.env > /dev/null
+  echo "SEARXNG_PASSWORD=$SEARXNG_PASSWORD" | tee -a ./.env > /dev/null
+  SEARXNG_BASICAUTH="$SEARXNG_USERNAME $SEARXNG_PASSWORD"
+  echo "SEARXNG_BASICAUTH=\"$SEARXNG_BASICAUTH\"" | tee -a ./.env > /dev/null
+  SEARXNG_API_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+  echo "SEARXNG_API_KEY=$SEARXNG_API_KEY" | tee -a ./.env > /dev/null
+  check_success "создание и добавление учетных данных в новый .env файл"
 fi
 
 # Создание шаблона настроек SearXNG
@@ -87,7 +118,7 @@ general:
   debug: false
   privacy_policy_url: false  # Отключаем ссылку на политику конфиденциальности
   enable_metrics: false      # Отключаем сбор метрик
-  не за пределами контейнера
+  # Не показываем информацию за пределами контейнера
   
 # Настройки сервера
 server:
