@@ -119,6 +119,7 @@ general:
   privacy_policy_url: false  # Отключаем ссылку на политику конфиденциальности
   enable_metrics: false      # Отключаем сбор метрик
   # Не показываем информацию за пределами контейнера
+  default_doi_resolver: "oadoi.org"
   
 # Настройки сервера
 server:
