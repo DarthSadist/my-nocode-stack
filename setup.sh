@@ -196,6 +196,23 @@ main() {
   echo "Waha дашборд доступен по адресу: https://waha.${DOMAIN_NAME}/dashboard/"
   echo "SearXNG доступен по адресу: https://searxng.${DOMAIN_NAME}"
   echo ""
+
+  # Загрузка учетных данных SearXNG для вывода
+  SEARXNG_USERNAME=""
+  SEARXNG_PASSWORD=""
+  if [ -f "/opt/.env" ]; then
+    SEARXNG_USERNAME=$(grep '^SEARXNG_USERNAME=' "/opt/.env" | cut -d'=' -f2)
+    SEARXNG_PASSWORD=$(grep '^SEARXNG_PASSWORD=' "/opt/.env" | cut -d'=' -f2)
+    # Удаляем кавычки, если они есть
+    SEARXNG_USERNAME=$(echo "$SEARXNG_USERNAME" | sed 's/^"//;s/"$//')
+    SEARXNG_PASSWORD=$(echo "$SEARXNG_PASSWORD" | sed 's/^"//;s/"$//')
+  fi
+
+  echo "Login credentials for SearXNG:"
+  echo "Логин: ${SEARXNG_USERNAME:-admin}"
+  echo "Пароль: ${SEARXNG_PASSWORD:-<см. /opt/.env>}"
+  echo ""
+
   echo "Login credentials for n8n:"
   echo "Email: ${USER_EMAIL}"
   echo "Password: ${N8N_PASSWORD}"

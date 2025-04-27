@@ -19,13 +19,13 @@ services:
     volumes:
       - searxng_data:/etc/searxng
     networks:
-      - caddy-network
+      - app-network
 
 volumes:
   searxng_data:
     name: searxng_data
 
 networks:
-  caddy-network:
+  app-network:
     external: true
-    name: caddy-network
+    name: app-network
