@@ -102,8 +102,8 @@ searxng.$DOMAIN_NAME {
     handle {
         # Добавляем базовую HTTP аутентификацию
         basicauth {
-            # Используем жестко заданные учетные данные для избежания проблем с подстановкой переменных
-            admin {$SEARXNG_PASSWORD}
+            # Используем жестко заданный логин и пароль
+            admin JDJhJDE0JENxRGdELjBvYW5EY0FXdFlITjk2RC41dTB3dFNQbTRNR3hCaWJpVjJpaHpodVZGd3I5blRt
         }
         
         reverse_proxy searxng:8080
