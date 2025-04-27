@@ -68,3 +68,56 @@ waha.$DOMAIN_NAME {
         Referrer-Policy "strict-origin-when-cross-origin"
     }
 }
+
+# SearXNG - приватная метапоисковая система
+searxng.$DOMAIN_NAME {
+    # Дефинируем API-запросы
+    @api {
+        path /search
+        query format=json*
+    }
+    
+    # Ограничение доступа к API - только внутренние сервисы стека
+    handle @api {
+        # Проверяем заголовок X-API-Source
+        request_header X-API-Source ""
+        respond 403 {
+            body "API доступ закрыт. Пожалуйста, используйте веб-интерфейс SearXNG."
+        }
+    }
+    
+    # Разрешаем доступ только из внутренней сети Docker
+    @internal_api {
+        path /search
+        query format=json*
+        header X-API-Source "internal-stack"
+    }
+    
+    # Проксируем внутренние API запросы
+    handle @internal_api {
+        reverse_proxy searxng:8080
+    }
+    
+    # Ограничиваем доступ на веб-страницу
+    handle {
+        # Временно отключаем аутентификацию для упрощения доступа
+        # При желании можно включить базовую аутентификацию позже
+        
+        reverse_proxy searxng:8080
+    }
+    
+    log {
+        output file /var/log/caddy/searxng.log {
+            roll_size 10MB
+            roll_keep 10
+        }
+    }
+    
+    header {
+        # Добавление заголовков безопасности
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}

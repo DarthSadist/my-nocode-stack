@@ -297,7 +297,7 @@ ensure_docker_network() {
 # Статистика запуска
 successful_services=0
 failed_services=0
-total_services=8  # n8n, flowise, qdrant, crawl4ai, watchtower, netdata, adminer, waha
+total_services=9  # n8n, flowise, qdrant, crawl4ai, watchtower, netdata, adminer, waha, searxng
 
 # Проверка и создание сети app-network для всех сервисов
 ensure_docker_network "app-network"
@@ -480,6 +480,40 @@ else
   ((failed_services++))
 fi
 
+# Запуск SearXNG
+echo "\n======================="
+echo "⚡ Запуск SearXNG..."
+echo "=======================\n"
+
+SEARXNG_COMPOSE_FILE="/opt/searxng-docker-compose.yaml"
+
+if [ -f "$SEARXNG_COMPOSE_FILE" ]; then
+  start_service "$SEARXNG_COMPOSE_FILE" "searxng" "$ENV_FILE"
+  if [ $? -eq 0 ]; then
+    echo "✅ SearXNG успешно запущен!"
+    # Копируем файл настроек SearXNG из /opt/searxng_settings
+    if [ -d "/opt/searxng_settings" ] && [ -f "/opt/searxng_settings/settings.yml" ]; then
+      echo "→ Настройка SearXNG API..."
+      # Ожидаем создания тома
+      sleep 5
+      sudo cp /opt/searxng_settings/settings.yml /var/lib/docker/volumes/searxng_data/_data/settings.yml 2>/dev/null
+      if [ $? -eq 0 ]; then
+        echo "✅ Файл настроек API SearXNG успешно скопирован"
+        # Перезапускаем SearXNG для применения настроек
+        sudo docker restart searxng
+      else
+        echo "⚠️ Не удалось скопировать файл настроек API SearXNG, но продолжаем установку..." >&2
+      fi
+    fi
+    ((successful_services++))
+  else
+    echo "⚠️ Не удалось запустить сервис SearXNG, но продолжаем установку..." >&2
+    ((failed_services++))
+  fi
+else
+  echo "⚠️ Файл $SEARXNG_COMPOSE_FILE не найден. Пропускаем запуск SearXNG." >&2
+fi
+
 # Ждем инициализацию всех сервисов
 echo "\n\n===========================================" 
 echo "🕒 Ожидание инициализации всех сервисов..."
@@ -513,6 +547,7 @@ check_service "watchtower"
 check_service "netdata"
 check_service "adminer" # Не критично, но проверяем
 check_service "waha" # WhatsApp HTTP API
+check_service "searxng" # SearXNG metasearch engine
 
 # Проверка WordPress и связанных сервисов
 if sudo docker ps | grep -q "wordpress"; then

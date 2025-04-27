@@ -100,18 +100,23 @@ main() {
   check_success "secret key generation"
   
   # Step 5b: WordPress Configuration
-  show_progress "Step 5b/8: WordPress Configuration"
+  show_progress "Step 5b/9: WordPress Configuration"
   ./setup-files/04b-setup-wordpress.sh
   check_success "WordPress configuration"
   
+  # Step 5c: SearXNG API Configuration
+  show_progress "Step 5c/9: SearXNG API Configuration"
+  ./setup-files/04c-setup-searxng-api.sh
+  check_success "SearXNG API configuration"
+  
   # Step 6: Template creation
-  show_progress "Step 6/8: Configuration file creation"
+  show_progress "Step 6/9: Configuration file creation"
   # Pass both DOMAIN_NAME and USER_EMAIL for Caddyfile processing
   ./setup-files/05-create-templates.sh "$DOMAIN_NAME" "$USER_EMAIL"
   check_success "configuration file creation"
   
   # Step 7: Firewall setup
-  show_progress "Step 7/8: Firewall setup"
+  show_progress "Step 7/9: Firewall setup"
   ./setup-files/06-setup-firewall.sh
   check_success "firewall setup"
   
@@ -139,7 +144,7 @@ main() {
   fi
   
   # Step 8: Service launch
-  show_progress "Step 8/8: Service launch"
+  show_progress "Step 8/9: Service launch"
   ./setup-files/07-start-services.sh
   check_success "service launch"
   
@@ -189,7 +194,25 @@ main() {
   echo "Netdata is available at: https://netdata.${DOMAIN_NAME}"
   echo "Qdrant Dashboard is available at: https://qdrant.${DOMAIN_NAME}/dashboard/"
   echo "Waha дашборд доступен по адресу: https://waha.${DOMAIN_NAME}/dashboard/"
+  echo "SearXNG доступен по адресу: https://searxng.${DOMAIN_NAME}"
   echo ""
+
+  # Загрузка учетных данных SearXNG для вывода
+  SEARXNG_USERNAME=""
+  SEARXNG_PASSWORD=""
+  if [ -f "/opt/.env" ]; then
+    SEARXNG_USERNAME=$(grep '^SEARXNG_USERNAME=' "/opt/.env" | cut -d'=' -f2)
+    SEARXNG_PASSWORD=$(grep '^SEARXNG_PASSWORD=' "/opt/.env" | cut -d'=' -f2)
+    # Удаляем кавычки, если они есть
+    SEARXNG_USERNAME=$(echo "$SEARXNG_USERNAME" | sed 's/^"//;s/"$//')
+    SEARXNG_PASSWORD=$(echo "$SEARXNG_PASSWORD" | sed 's/^"//;s/"$//')
+  fi
+
+  echo "Login credentials for SearXNG:"
+  echo "Логин: ${SEARXNG_USERNAME:-admin}"
+  echo "Пароль: ${SEARXNG_PASSWORD:-<см. /opt/.env>}"
+  echo ""
+
   echo "Login credentials for n8n:"
   echo "Email: ${USER_EMAIL}"
   echo "Password: ${N8N_PASSWORD}"

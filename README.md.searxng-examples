@@ -1,0 +1,241 @@
+### Практическое применение SearXNG в текущей конфигурации
+
+SearXNG можно эффективно использовать в сочетании с другими сервисами стека для решения различных задач. Вот несколько практических примеров:
+
+#### 1. Создание агрегатора новостей с n8n
+
+Вы можете создать автоматизированный агрегатор новостей, который собирает информацию по определенным темам:
+
+```javascript
+// Узел Function в n8n для запроса к SearXNG API
+const topics = [
+  "искусственный интеллект",
+  "машинное обучение",
+  "нейронные сети"
+];
+
+// Для каждой темы выполняем поиск
+const results = [];
+for (const topic of topics) {
+  // Формируем запрос к SearXNG
+  const response = await $http.request({
+    url: `https://searxng.${DOMAIN_NAME}/search`,
+    method: 'GET',
+    headers: {
+      'X-API-Source': 'internal-stack'  // Обязательный заголовок для авторизации
+    },
+    qs: {
+      q: topic + " news",
+      format: 'json',
+      language: 'ru',
+      engines: 'google,bing,yandex',
+      time_range: 'day',  // Только за последние 24 часа
+      categories: 'news'  // Только новости
+    }
+  });
+  
+  // Обрабатываем результаты
+  if (response.status === 200 && response.data && response.data.results) {
+    const topResults = response.data.results
+      .slice(0, 5)  // Берем только 5 верхних результатов
+      .map(result => ({
+        title: result.title,
+        url: result.url,
+        content: result.content || "(описание недоступно)",
+        source: result.engine,
+        date: new Date().toISOString()
+      }));
+    
+    results.push({
+      topic,
+      items: topResults
+    });
+  }
+}
+
+// Возвращаем результаты для дальнейшей обработки
+return { json: { results } };
+```
+
+Полученные данные можно отправить по электронной почте, сохранить в базу данных или использовать в других рабочих процессах.
+
+#### 2. Создание AI-ассистента с доступом в интернет в Flowise
+
+Вы можете интегрировать SearXNG с LLM в Flowise для создания AI-ассистента с доступом к актуальной информации из интернета:
+
+1. **Создайте собственный инструмент (Custom Tool) в Flowise**:
+   ```javascript
+   const axios = require('axios');
+
+   module.exports = {
+     name: 'SearXNG Search',
+     description: 'Search for information on the internet using SearXNG',
+     args: {
+       query: {
+         type: 'string',
+         description: 'The search query'
+       },
+       language: {
+         type: 'string',
+         description: 'Search language (e.g., ru, en)',
+         default: 'ru'
+       }
+     },
+     handler: async ({ query, language }) => {
+       try {
+         // Выполняем поисковый запрос через SearXNG API
+         const response = await axios({
+           method: 'GET',
+           url: `https://searxng.${process.env.DOMAIN_NAME}/search`,
+           headers: {
+             'X-API-Source': 'internal-stack'
+           },
+           params: {
+             q: query,
+             format: 'json',
+             language: language,
+             engines: 'google,bing,duckduckgo'
+           }
+         });
+         
+         if (!response.data || !response.data.results || response.data.results.length === 0) {
+           return "Не найдено результатов по вашему запросу.";
+         }
+         
+         // Форматируем результаты
+         const results = response.data.results.slice(0, 3);
+         const formattedResults = results.map((result, index) => 
+           `[${index + 1}] ${result.title}\n${result.url}\n${result.content || ''}`
+         ).join('\n\n');
+         
+         return `Результаты поиска:\n\n${formattedResults}`;
+       } catch (error) {
+         return `Ошибка при поиске: ${error.message}`;
+       }
+     }
+   };
+   ```
+
+2. **Подключите этот инструмент к LLM-узлу в Flowise**, создав следующую цепочку:
+   - Начало потока: `ChatInput`
+   - Анализ запроса: `LLM` с инструкцией определить, нужен ли поиск
+   - Ветвление: `IfElse` для проверки, требуется ли поиск
+   - Поиск: Подключение созданного инструмента `SearXNG Search`
+   - Ответ с использованием данных: Еще один `LLM` для формирования ответа
+   - Финальный вывод: `ChatOutput`
+
+#### 3. Мониторинг упоминаний в интернете
+
+Вы можете создать систему мониторинга упоминаний вашей компании, продукта или персоны:
+
+```javascript
+// Узел Function в n8n для мониторинга упоминаний
+const searchTerms = [
+  "название компании",
+  "имя генерального директора",
+  "название продукта"
+];
+
+// Предыдущие результаты для сравнения
+const previousResults = $node["Get Previous Results"].json.data || [];
+const previousUrlsSet = new Set(previousResults.map(item => item.url));
+
+// Выполняем поиск для каждого термина
+const newMentions = [];
+
+for (const term of searchTerms) {
+  const response = await $http.request({
+    url: `https://searxng.${DOMAIN_NAME}/search`,
+    method: 'GET',
+    headers: {
+      'X-API-Source': 'internal-stack'
+    },
+    qs: {
+      q: term,
+      format: 'json',
+      language: 'ru',
+      time_range: 'week'
+    }
+  });
+  
+  if (response.status === 200 && response.data && response.data.results) {
+    // Проверяем, есть ли новые упоминания
+    const results = response.data.results;
+    
+    for (const result of results) {
+      if (!previousUrlsSet.has(result.url)) {
+        newMentions.push({
+          term,
+          title: result.title,
+          url: result.url,
+          content: result.content,
+          found: new Date().toISOString()
+        });
+      }
+    }
+  }
+}
+
+// Если есть новые упоминания, можно отправить уведомление
+if (newMentions.length > 0) {
+  // Здесь может быть код для отправки уведомления
+  // Например, через электронную почту или мессенджер
+}
+
+// Возвращаем новые и предыдущие упоминания для сохранения
+return {
+  json: {
+    newMentions,
+    allMentions: [...newMentions, ...previousResults]
+  }
+};
+```
+
+#### 4. Обогащение векторного хранилища Qdrant актуальными данными
+
+Вы можете использовать SearXNG для обогащения векторного хранилища Qdrant актуальными данными из интернета:
+
+```javascript
+// Узел Function в n8n для обогащения векторного хранилища
+const topic = items[0].json.topic || "искусственный интеллект";
+const number_of_results = items[0].json.number_of_results || 10;
+
+// Собираем актуальные данные через SearXNG
+const response = await $http.request({
+  url: `https://searxng.${DOMAIN_NAME}/search`,
+  method: 'GET',
+  headers: {
+    'X-API-Source': 'internal-stack'
+  },
+  qs: {
+    q: topic,
+    format: 'json',
+    language: 'ru',
+    engines: 'google,bing,duckduckgo'
+  }
+});
+
+// Обрабатываем результаты
+if (response.status !== 200 || !response.data || !response.data.results) {
+  return { json: { success: false, error: 'Не удалось получить результаты поиска' } };
+}
+
+// Извлекаем текстовые данные из результатов
+const searchResults = response.data.results.slice(0, number_of_results);
+const textData = searchResults.map(result => ({
+  id: $helper.createUUID(),
+  title: result.title,
+  url: result.url,
+  content: result.content || "",
+  source: "searxng",
+  timestamp: new Date().toISOString(),
+  topic
+}));
+
+// Затем можно использовать OpenAI для создания эмбеддингов и загрузки в Qdrant
+// Это сделано в другом узле рабочего процесса
+
+return { json: { success: true, data: textData } };
+```
+
+Эти примеры демонстрируют, как SearXNG может быть интегрирован с другими сервисами стека для создания полезных рабочих процессов и инструментов.
