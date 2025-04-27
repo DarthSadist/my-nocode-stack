@@ -100,11 +100,8 @@ searxng.$DOMAIN_NAME {
     
     # Ограничиваем доступ на веб-страницу
     handle {
-        # Добавляем базовую HTTP аутентификацию
-        basicauth {
-            # Используем жестко заданный логин и пароль
-            admin JDJhJDE0JENxRGdELjBvYW5EY0FXdFlITjk2RC41dTB3dFNQbTRNR3hCaWJpVjJpaHpodVZGd3I5blRt
-        }
+        # Временно отключаем аутентификацию для упрощения доступа
+        # При желании можно включить базовую аутентификацию позже
         
         reverse_proxy searxng:8080
     }
