@@ -72,6 +72,14 @@ QDRANT_API_KEY=$(openssl rand -hex 32)
 # Generate a random CRAWL4AI_JWT_SECRET
 CRAWL4AI_JWT_SECRET=$(openssl rand -hex 32)
 
+# Generate WAHA credentials
+WAHA_API_USERNAME="admin"
+WAHA_API_PASSWORD=$(generate_safe_password 16)
+if [ -z "$WAHA_API_PASSWORD" ]; then
+  echo "ERROR: Failed to generate password for WAHA"
+  exit 1
+fi
+
 # Debug output for all variables
 set +x
 echo "[DEBUG] N8N_ENCRYPTION_KEY: $N8N_ENCRYPTION_KEY"
@@ -86,10 +94,12 @@ echo "[DEBUG] POSTGRES_PASSWORD: $POSTGRES_PASSWORD"
 echo "[DEBUG] DOMAIN_NAME: $DOMAIN_NAME"
 echo "[DEBUG] QDRANT_API_KEY: $QDRANT_API_KEY"
 echo "[DEBUG] CRAWL4AI_JWT_SECRET: $CRAWL4AI_JWT_SECRET"
+echo "[DEBUG] WAHA_API_USERNAME: $WAHA_API_USERNAME"
+echo "[DEBUG] WAHA_API_PASSWORD: $WAHA_API_PASSWORD"
 set -x
 
 # Abort if any required variable is empty
-if [ -z "$N8N_ENCRYPTION_KEY" ] || [ -z "$N8N_USER_MANAGEMENT_JWT_SECRET" ] || [ -z "$USER_EMAIL" ] || [ -z "$N8N_PASSWORD" ] || [ -z "$FLOWISE_PASSWORD" ] || [ -z "$POSTGRES_DB" ] || [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$DOMAIN_NAME" ] || [ -z "$QDRANT_API_KEY" ] || [ -z "$CRAWL4AI_JWT_SECRET" ]; then
+if [ -z "$N8N_ENCRYPTION_KEY" ] || [ -z "$N8N_USER_MANAGEMENT_JWT_SECRET" ] || [ -z "$USER_EMAIL" ] || [ -z "$N8N_PASSWORD" ] || [ -z "$FLOWISE_PASSWORD" ] || [ -z "$POSTGRES_DB" ] || [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$DOMAIN_NAME" ] || [ -z "$QDRANT_API_KEY" ] || [ -z "$CRAWL4AI_JWT_SECRET" ] || [ -z "$WAHA_API_USERNAME" ] || [ -z "$WAHA_API_PASSWORD" ]; then
   echo "[ERROR] One or more required variables are empty. Aborting .env generation." >&2
   exit 1
 fi
@@ -107,6 +117,8 @@ POSTGRES_PASSWORD_ESCAPED=$(printf '%s' "$POSTGRES_PASSWORD" | sed 's/"/\\"/g')
 DOMAIN_NAME_ESCAPED=$(printf '%s' "$DOMAIN_NAME" | sed 's/"/\\"/g')
 QDRANT_API_KEY_ESCAPED=$(printf '%s' "$QDRANT_API_KEY" | sed 's/"/\\"/g')
 CRAWL4AI_JWT_SECRET_ESCAPED=$(printf '%s' "$CRAWL4AI_JWT_SECRET" | sed 's/"/\\"/g')
+WAHA_API_USERNAME_ESCAPED=$(printf '%s' "$WAHA_API_USERNAME" | sed 's/"/\\"/g')
+WAHA_API_PASSWORD_ESCAPED=$(printf '%s' "$WAHA_API_PASSWORD" | sed 's/"/\\"/g')
 
 cat > .env << EOL
 # Settings for n8n
@@ -137,6 +149,10 @@ QDRANT_API_KEY="$QDRANT_API_KEY_ESCAPED"
 
 # Secret for Crawl4AI API authentication
 CRAWL4AI_JWT_SECRET="$CRAWL4AI_JWT_SECRET_ESCAPED"
+
+# WhatsApp HTTP API credentials
+WAHA_API_USERNAME="$WAHA_API_USERNAME_ESCAPED"
+WAHA_API_PASSWORD="$WAHA_API_PASSWORD_ESCAPED"
 EOL
 
 # Проверка успешности создания .env файла
@@ -174,6 +190,11 @@ echo "  - Stored in .env as CRAWL4AI_JWT_SECRET" >> ./setup-files/passwords.txt
 echo "Qdrant API Key:" >> ./setup-files/passwords.txt
 echo "  - This key is used for Qdrant API authentication." >> ./setup-files/passwords.txt
 echo "  - Stored in .env as QDRANT_API_KEY" >> ./setup-files/passwords.txt
+echo " " >> ./setup-files/passwords.txt
+echo "WAHA API Credentials:" >> ./setup-files/passwords.txt
+echo "  - Username: ${WAHA_API_USERNAME}" >> ./setup-files/passwords.txt
+echo "  - Password: ${WAHA_API_PASSWORD}" >> ./setup-files/passwords.txt
+echo "  - These credentials are used for WhatsApp HTTP API authentication." >> ./setup-files/passwords.txt
 echo "=======================================================" >> ./setup-files/passwords.txt
 
 echo "✅ Secret keys and passwords successfully generated"

@@ -1285,8 +1285,8 @@ Netdata предоставляет исчерпывающую информаци
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/DarthSadist/cloud-local-n8n-flowise.git
-   cd cloud-local-n8n-flowise
+   git clone https://github.com/DarthSadist/my-nocode-stack.git
+   cd my-nocode-stack
    ```
 
 2. Запустите установочный скрипт:

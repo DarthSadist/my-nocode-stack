@@ -7,6 +7,8 @@ services:
       - WAHA_WORKER_ID=waha
       - WAHA_API_PORT=3000
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - WAHA_API_USERNAME=${WAHA_API_USERNAME:-admin}
+      - WAHA_API_PASSWORD=${WAHA_API_PASSWORD:-changeme123}
     volumes:
       - waha_sessions:/app/.sessions
       - waha_media:/app/.media
