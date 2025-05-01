@@ -37,6 +37,135 @@
 - Предусмотрена система пользователей с разграничением доступа к workspaces
 - [Примеры рабочих процессов](https://n8n.io/workflows/)
 
+#### Предустановленные JavaScript библиотеки для узла Code
+
+Для удобства работы с узлом Code в n8n предустановлены следующие JavaScript библиотеки:
+
+##### Манипуляции с данными
+- **lodash** - мощные утилиты для работы с массивами, объектами и коллекциями данных
+- **moment** и **date-fns** - библиотеки для продвинутой работы с датами и временем
+
+##### HTTP и работа с API
+- **axios** - продвинутый HTTP-клиент с поддержкой перехватчиков и отмены запросов
+
+##### Обработка текста и NLP
+- **natural** - библиотека для обработки естественного языка: токенизация, стемминг, TF-IDF
+- **string-similarity** - сравнение строк и поиск похожих текстов
+
+##### Векторные вычисления и базы данных
+- **ml-distance** - расчет различных метрик расстояния между векторами
+- **@pinecone-database/pinecone** - клиент для векторной БД Pinecone (альтернатива Qdrant)
+
+##### Парсинг и преобразование данных
+- **cheerio** - парсинг HTML/XML документов с jQuery-подобным синтаксисом
+- **csv-parser** и **json2csv** - конвертация между JSON и CSV форматами
+- **xlsx** - работа с Excel-файлами
+- **pdf-parse** - извлечение текста из PDF-документов
+
+##### Интеграция с AI и обработка медиа
+- **openai** - официальный клиент OpenAI API для работы с ChatGPT, DALL-E и другими моделями
+- **langchain** - фреймворк для создания LLM-приложений
+- **sharp** - быстрая библиотека для обработки изображений
+- **tesseract.js** - OCR (распознавание текста с изображений)
+
+##### Криптография и безопасность
+- **crypto-js** - криптографические функции: хеширование, шифрование
+- **jsonwebtoken** - создание и проверка JWT токенов
+- **validator** - валидация строк (емейлы, URL, IP и т.д.)
+- **uuid** - генерация UUID идентификаторов
+
+##### Разработка и тестирование
+- **winston** - продвинутое логгирование
+- **@faker-js/faker** - генерация реалистичных тестовых данных
+
+##### Интеграция с мессенджерами
+- **whatsapp-web.js** - неофициальный клиент WhatsApp для расширенной интеграции с Waha
+
+Полная документация с примерами использования каждой библиотеки доступна в файле `/opt/setup-files/n8n-libraries-docs.md`.
+
+##### Примеры использования библиотек в узле Code
+
+**Пример 1: Использование lodash и axios для обработки данных**
+
+```javascript
+// Импорт библиотек в узле Code
+const _ = require('lodash');
+const axios = require('axios');
+
+// Пример работы с коллекциями данных через lodash
+const items = $input.all();
+const groupedItems = _.groupBy(items, 'json.category');
+const result = _.mapValues(groupedItems, group => {
+  return {
+    count: group.length,
+    totalAmount: _.sumBy(group, 'json.amount')
+  };
+});
+
+// Асинхронная функция для API-запросов с помощью axios
+async function fetchExternalData() {
+  try {
+    const response = await axios.get('https://api.example.com/data', {
+      headers: {
+        'Authorization': `Bearer ${$env.API_TOKEN}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Ошибка API: ${error.message}`);
+    return { error: error.message };
+  }
+}
+
+// Возвращаем результат
+return { 
+  groupedData: result, 
+  externalData: await fetchExternalData() 
+};
+```
+
+**Пример 2: Парсинг и анализ данных с помощью cheerio и natural**
+
+```javascript
+const cheerio = require('cheerio');
+const natural = require('natural');
+const axios = require('axios');
+
+// Функция для парсинга веб-страницы
+async function parseWebPage() {
+  const response = await axios.get('https://example.com/news');
+  const $ = cheerio.load(response.data);
+  
+  // Извлекаем текст из тегов <article>
+  const articles = [];
+  $('article').each((i, elem) => {
+    const title = $(elem).find('h2').text().trim();
+    const content = $(elem).find('p').text().trim();
+    articles.push({ title, content });
+  });
+  
+  // Анализируем тональность текста с помощью natural
+  const Analyzer = natural.SentimentAnalyzer;
+  const stemmer = natural.PorterStemmer;
+  const analyzer = new Analyzer("Russian", stemmer, "afinn");
+  
+  // Добавляем анализ тональности к каждой статье
+  const articlesWithSentiment = articles.map(article => {
+    const tokens = new natural.WordTokenizer().tokenize(article.content);
+    const sentiment = analyzer.getSentiment(tokens);
+    return {
+      ...article,
+      sentiment,
+      sentiment_label: sentiment > 0 ? 'позитивный' : sentiment < 0 ? 'негативный' : 'нейтральный'
+    };
+  });
+  
+  return articlesWithSentiment;
+}
+
+return await parseWebPage();
+```
+
 ### Flowise
 [Flowise](https://github.com/FlowiseAI/Flowise) - это инструмент с открытым исходным кодом для создания настраиваемых AI-приложений и цепочек взаимодействия с LLM:
 - Визуальный конструктор для создания чат-ботов и LLM-приложений без написания кода

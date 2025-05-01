@@ -12,8 +12,11 @@ volumes:
 
 services:
   n8n:
-    image: n8nio/n8n:latest
+    image: custom-n8n:latest
     container_name: n8n
+    build:
+      context: /opt/setup-files
+      dockerfile: n8n-dockerfile
     restart: unless-stopped
     # Environment variables for n8n
     environment:
