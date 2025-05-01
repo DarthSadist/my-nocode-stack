@@ -275,6 +275,47 @@ check_compose_file() {
   fi
 }
 
+# Функция для сборки кастомного образа n8n с дополнительными библиотеками
+build_custom_n8n_image() {
+    echo "⚙️ Сборка кастомного образа n8n с предустановленными библиотеками JavaScript..."
+    
+    # Проверка и создание директории setup-files
+    if [ ! -d "/opt/setup-files" ]; then
+        echo "⚠️ Директория /opt/setup-files не существует. Создаём..."
+        sudo mkdir -p /opt/setup-files
+    fi
+    
+    # Проверяем существование Dockerfile и копируем его, если необходимо
+    if [ ! -f "/opt/setup-files/n8n-dockerfile" ]; then
+        if [ -f "$(dirname "$0")/n8n-dockerfile" ]; then
+            echo "⚙️ Копируем n8n-dockerfile в /opt/setup-files/"
+            sudo cp "$(dirname "$0")/n8n-dockerfile" "/opt/setup-files/"
+        else
+            echo "❌ ОШИБКА: Файл n8n-dockerfile не найден" >&2
+            return 1
+        fi
+    fi
+    
+    # Проверяем и копируем файл документации
+    if [ ! -f "/opt/setup-files/n8n-libraries-docs.md" ]; then
+        if [ -f "$(dirname "$0")/n8n-libraries-docs.md" ]; then
+            echo "⚙️ Копируем n8n-libraries-docs.md в /opt/setup-files/"
+            sudo cp "$(dirname "$0")/n8n-libraries-docs.md" "/opt/setup-files/"
+        else
+            echo "⚠️ Файл n8n-libraries-docs.md не найден, продолжаем без него"
+        fi
+    fi
+    
+    # Сборка образа
+    if ! sudo docker build -t custom-n8n:latest -f /opt/setup-files/n8n-dockerfile /opt/setup-files; then
+        echo "❌ ОШИБКА: Не удалось собрать кастомный образ n8n" >&2
+        return 1
+    fi
+    
+    echo "✅ Кастомный образ n8n успешно собран"
+    return 0
+}
+
 # Функция для проверки и создания сети Docker
 ensure_docker_network() {
   local network_name=$1
@@ -315,6 +356,22 @@ if [ $? -ne 0 ]; then
 fi
 
 # Запуск n8n стека (включает Caddy, Postgres, Redis, Adminer)
+
+# Сборка кастомного образа n8n с дополнительными библиотеками
+echo -e "⚡ Подготовка кастомного образа n8n с JavaScript библиотеками..."
+build_custom_n8n_image
+if [ $? -ne 0 ]; then
+    echo -e "⚠️ Не удалось собрать кастомный образ n8n. Продолжаем с использованием стандартного образа."
+    
+    # Модифицируем файл docker-compose для использования стандартного образа
+    echo -e "⚙️ Откатываемся к стандартному образу n8n..."
+    sudo sed -i 's/image: custom-n8n:latest/image: n8nio\/n8n:latest/' "$N8N_COMPOSE_FILE"
+    # Удаляем секцию build
+    sudo sed -i '/[[:space:]]*build:/,+2d' "$N8N_COMPOSE_FILE"
+    
+    echo -e "✅ Файл docker-compose обновлен для использования стандартного образа n8n."
+fi
+
 start_service "$N8N_COMPOSE_FILE" "n8n" "$ENV_FILE"
 if [ $? -eq 0 ]; then
   ((successful_services++))
