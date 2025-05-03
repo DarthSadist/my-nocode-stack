@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   wordpress:
     image: wordpress:latest
@@ -14,6 +12,8 @@ services:
       - WORDPRESS_CONFIG_EXTRA=
         define('WP_MEMORY_LIMIT', '256M');
         define('WP_MAX_MEMORY_LIMIT', '512M');
+        define('WP_HOME', 'https://wordpress.${DOMAIN_NAME}');
+        define('WP_SITEURL', 'https://wordpress.${DOMAIN_NAME}');
     volumes:
       - wordpress_data:/var/www/html
     networks:
