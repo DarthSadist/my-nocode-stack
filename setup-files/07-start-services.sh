@@ -232,7 +232,8 @@ start_service() {
   if [ -n "$env_file" ]; then
     start_cmd="$start_cmd --env-file $env_file"
   fi
-  start_cmd="$start_cmd up -d"
+  # Добавляем project-name для всех контейнеров и параметр remove-orphans
+  start_cmd="$start_cmd -p nocode-stack up -d --remove-orphans"
   
   # Пробуем запустить с повторными попытками
   while [ $retry_count -lt $max_retries ]; do
