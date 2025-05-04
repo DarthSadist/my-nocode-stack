@@ -19,6 +19,7 @@ services:
 networks:
   app-network:
     external: true
+    name: app-network
 
 # Раскомментируйте, если нужны постоянные тома
 # volumes:

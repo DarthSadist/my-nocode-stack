@@ -16,6 +16,7 @@ services:
 networks:
   app-network:
     external: true
+    name: app-network
 
 volumes:
   flowise_data:
