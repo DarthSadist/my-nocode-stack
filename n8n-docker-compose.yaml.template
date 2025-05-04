@@ -29,6 +29,7 @@ services:
       - N8N_PROTOCOL=https
       - N8N_PORT=443
       - N8N_WEBHOOK_TUNNEL_URL=https://n8n.${DOMAIN_NAME}
+      - N8N_RUNNERS_ENABLED=true
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
