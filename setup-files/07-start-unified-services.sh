@@ -177,6 +177,22 @@ fi
 # Проверка и создание сети app-network для всех сервисов
 ensure_docker_network "app-network"
 
+# Проверка и создание недостающих томов для Netdata
+echo "❗ Проверка томов Netdata..."
+for volume in "netdataconfig" "netdatalib" "netdatacache"; do
+    if ! sudo docker volume inspect "$volume" > /dev/null 2>&1; then
+        echo "❗ Том $volume не найден, создаем..."
+        sudo docker volume create "$volume"
+        if [ $? -eq 0 ]; then
+            echo "✅ Том $volume успешно создан"
+        else
+            echo "❌ Ошибка при создании тома $volume" >&2
+        fi
+    else
+        echo "✅ Том $volume уже существует"
+    fi
+done
+
 # Проверка и исправление Caddyfile перед запуском сервисов
 echo -e "\n⚙️ Проверка конфигурации Caddy перед запуском..."
 check_and_fix_caddyfile
