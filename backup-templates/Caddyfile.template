@@ -1,0 +1,70 @@
+# Глобальные настройки Caddy
+{
+    # ВАЖНО: email используется для регистрации в Let's Encrypt
+    # Если переменная $USER_EMAIL не подставляется, скрипт 07-start-services.sh исправит это автоматически
+    email $USER_EMAIL
+    
+    # Используем официальный ACME-сервер Let's Encrypt для получения сертификатов
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+    
+    # Для тестирования можно использовать staging-сервер Let's Encrypt
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory # Раскомментируйте для тестирования
+    
+    # Дополнительные настройки безопасности
+    # Настройки HTTPS и перенаправления
+    # auto_https по умолчанию включен, поэтому не указываем его
+}
+
+# n8n
+n8n.$DOMAIN_NAME {
+    reverse_proxy n8n:5678
+}
+
+# Flowise
+flowise.$DOMAIN_NAME {
+    reverse_proxy flowise:3001
+}
+
+# Adminer
+adminer.$DOMAIN_NAME {
+    reverse_proxy adminer:8080
+}
+
+# Qdrant UI (Protected by API Key)
+qdrant.$DOMAIN_NAME {
+    reverse_proxy qdrant:6333
+}
+
+# Crawl4AI
+crawl4ai.$DOMAIN_NAME {
+    reverse_proxy crawl4ai:8000
+}
+
+# Netdata
+netdata.$DOMAIN_NAME {
+    reverse_proxy netdata:19999
+}
+
+# WordPress
+wordpress.$DOMAIN_NAME {
+    reverse_proxy wordpress:80
+    header {
+        # Добавление заголовков безопасности
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+
+# Waha - WhatsApp HTTP API
+waha.$DOMAIN_NAME {
+    reverse_proxy waha:3000
+    header {
+        # Добавление заголовков безопасности
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
