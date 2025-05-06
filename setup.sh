@@ -140,7 +140,7 @@ main() {
   
   # Step 8: Service launch
   show_progress "Step 8/8: Service launch"
-  ./setup-files/07-start-services.sh
+  ./setup-files/07-start-unified-services.sh
   check_success "service launch"
   
   # Load generated passwords for final display
