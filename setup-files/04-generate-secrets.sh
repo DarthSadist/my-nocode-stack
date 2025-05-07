@@ -153,6 +153,9 @@ CRAWL4AI_JWT_SECRET="$CRAWL4AI_JWT_SECRET_ESCAPED"
 # WhatsApp HTTP API credentials
 WAHA_API_USERNAME="$WAHA_API_USERNAME_ESCAPED"
 WAHA_API_PASSWORD="$WAHA_API_PASSWORD_ESCAPED"
+
+# Хеш пароля для базовой аутентификации Caddy (генерируется автоматически)
+WAHA_API_PASSWORD_HASH="$(caddy hash-password --plaintext $WAHA_API_PASSWORD 2>/dev/null || echo 'JDJhJDE0JDhoVFhDVHJJZWZ4ZmUwTTg5ZmRQeU9sVUtpNEZHRVd1MEh2OUxiQVV0RHVkWENuM1BHVEpL')" 
 EOL
 
 # Проверка успешности создания .env файла

@@ -50,6 +50,10 @@ wordpress.flowdarth.ru {
 }
 
 # Waha
-waha.flowdarth.ru {
+waha.${DOMAIN_NAME} {
+    # Базовая аутентификация для защиты доступа
+    basicauth * {
+        ${WAHA_API_USERNAME} ${WAHA_API_PASSWORD_HASH}
+    }
     reverse_proxy waha:3000
 }
