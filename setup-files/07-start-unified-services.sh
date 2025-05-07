@@ -295,6 +295,76 @@ else
     echo "⚠️ Внимание: Caddy (обратный прокси) не слушает порты 80 или 443"
 fi
 
+# Функция проверки сетевого взаимодействия
+check_network_connectivity() {
+    local service="$1"
+    local target="$2"
+    echo -n "🔍 Проверка сетевого доступа от $service до $target... "
+    
+    if sudo docker exec "$service" ping -c 1 -W 2 "$target" &> /dev/null; then
+        echo "✅ ДОСТУПЕН"
+        return 0
+    else
+        echo "❌ НЕДОСТУПЕН" >&2
+        return 1
+    fi
+}
+
+# Проверка сетевого взаимодействия между ключевыми сервисами
+echo -e "\n=========================================================\n🔍 ПРОВЕРКА СЕТЕВОГО ВЗАИМОДЕЙСТВИЯ:\n"
+
+NETWORK_ERRORS=0
+# Проверяем ключевые связи между сервисами
+if sudo docker ps | grep -q "n8n"; then
+    # Проверка связи n8n с БД и Redis
+    check_network_connectivity "n8n" "postgres" || ((NETWORK_ERRORS++))
+    check_network_connectivity "n8n" "n8n_redis" || ((NETWORK_ERRORS++))
+    
+    if [ -n "$(sudo docker ps --format '{{.Names}}' | grep -o 'caddy')" ]; then
+        check_network_connectivity "n8n" "caddy" || ((NETWORK_ERRORS++))
+        check_network_connectivity "caddy" "n8n" || ((NETWORK_ERRORS++))
+    fi
+fi
+
+if sudo docker ps | grep -q "flowise"; then
+    # Проверка связи flowise с БД
+    check_network_connectivity "flowise" "postgres" || ((NETWORK_ERRORS++))
+    
+    if [ -n "$(sudo docker ps --format '{{.Names}}' | grep -o 'caddy')" ]; then
+        check_network_connectivity "flowise" "caddy" || ((NETWORK_ERRORS++))
+        check_network_connectivity "caddy" "flowise" || ((NETWORK_ERRORS++))
+    fi
+fi
+
+# Проверка DNS разрешения в одном из контейнеров
+if [ -n "$(sudo docker ps --format '{{.Names}}' | grep -o 'caddy')" ]; then
+    echo -e "\n📋 Проверка DNS конфигурации в контейнере caddy:"
+    sudo docker exec caddy cat /etc/resolv.conf
+fi
+
+# Вывод информации о сети
+echo -e "\n📋 Информация о сети app-network:"
+NETWORK_INFO=$(sudo docker network inspect app-network 2>/dev/null)
+if [ $? -eq 0 ]; then
+    echo "\n✅ Сеть app-network существует и настроена правильно"
+    echo "\n💼 Контейнеры в сети app-network:"
+    echo "$NETWORK_INFO" | grep -o '"Name": "[^"]*"' | cut -d'"' -f4
+else
+    echo "\n❌ Сеть app-network не найдена или неправильно настроена!" >&2
+    ((NETWORK_ERRORS++))
+fi
+
+# Вывод итогов проверки сетевого взаимодействия
+if [ $NETWORK_ERRORS -eq 0 ]; then
+    echo -e "\n✅ Сетевое взаимодействие между сервисами работает корректно!"
+else
+    echo -e "\n❌ Обнаружены проблемы с сетевым взаимодействием ($NETWORK_ERRORS ошибок)" >&2
+    echo -e "💡 Возможные решения:" >&2
+    echo "  - Перезагрузить сеть Docker: sudo docker network rm app-network && sudo docker network create app-network" >&2
+    echo "  - Перезапустить службу Docker: sudo systemctl restart docker" >&2
+    echo "  - Проверить файлы /etc/hosts в контейнерах" >&2
+fi
+
 # Вывод общего результата
 echo -e "\n=========================================================\n🏁 РЕЗУЛЬТАТЫ ЗАПУСКА:"
 RUNNING_COUNT=$(sudo docker ps --format "{{.Names}}" | wc -l)
