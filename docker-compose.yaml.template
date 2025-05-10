@@ -57,29 +57,29 @@ services:
       retries: 3
       start_period: 30s
     environment:
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_ENCRYPTION_KEY="${N8N_ENCRYPTION_KEY}"
       - N8N_USER_MANAGEMENT_DISABLED=false
       - N8N_DIAGNOSTICS_ENABLED=false
       - N8N_PERSONALIZATION_ENABLED=false
-      - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_USER_MANAGEMENT_JWT_SECRET}
-      - N8N_DEFAULT_USER_EMAIL=${N8N_DEFAULT_USER_EMAIL}
-      - N8N_DEFAULT_USER_PASSWORD=${N8N_DEFAULT_USER_PASSWORD}
+      - N8N_USER_MANAGEMENT_JWT_SECRET="${N8N_USER_MANAGEMENT_JWT_SECRET}"
+      - N8N_DEFAULT_USER_EMAIL="${N8N_DEFAULT_USER_EMAIL}"
+      - N8N_DEFAULT_USER_PASSWORD="${N8N_DEFAULT_USER_PASSWORD}"
       - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
-      - N8N_HOST=n8n.${DOMAIN_NAME}
+      - N8N_HOST="n8n.${DOMAIN_NAME}"
       - N8N_PROTOCOL=https
       - N8N_SKIP_WEBHOOK_PORT_PREFIX_FOR_MAIN_URL=true
-      - N8N_WEBHOOK_URL=https://n8n.${DOMAIN_NAME}
-      - N8N_WEBHOOK_TUNNEL_URL=https://n8n.${DOMAIN_NAME}
+      - N8N_WEBHOOK_URL="https://n8n.${DOMAIN_NAME}"
+      - N8N_WEBHOOK_TUNNEL_URL="https://n8n.${DOMAIN_NAME}"
       - N8N_PORT=5678
       - N8N_ENDPOINT_WEBHOOK_TUNNEL=webhook
       - N8N_RUNNERS_ENABLED=true
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - DB_POSTGRESDB_DATABASE="${POSTGRES_DB}"
+      - DB_POSTGRESDB_USER="${POSTGRES_USER}"
+      - DB_POSTGRESDB_PASSWORD="${POSTGRES_PASSWORD}"
+      - GENERIC_TIMEZONE="${GENERIC_TIMEZONE}"
       - QUEUE_BULL_REDIS_HOST=n8n_redis
     volumes:
       - n8n_data:/home/node/.n8n
@@ -94,15 +94,15 @@ services:
     container_name: postgres
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U \"${POSTGRES_USER}\""]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB="${POSTGRES_DB}"
+      - POSTGRES_USER="${POSTGRES_USER}"
+      - POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
     volumes:
       - n8n_postgres_data:/var/lib/postgresql/data
       - /opt/pgvector-init.sql:/docker-entrypoint-initdb.d/pgvector-init.sql:ro
@@ -173,9 +173,9 @@ services:
       start_period: 30s
     environment:
       - PORT=3001
-      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
-      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
-      - SERVER_URL=https://flowise.${DOMAIN_NAME}
+      - FLOWISE_USERNAME="${FLOWISE_USERNAME}"
+      - FLOWISE_PASSWORD="${FLOWISE_PASSWORD}"
+      - SERVER_URL="https://flowise.${DOMAIN_NAME}"
       - HOST=0.0.0.0
     ports:
       - "3001"
@@ -203,7 +203,7 @@ services:
     networks:
       - app-network
     environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+      QDRANT__SERVICE__API_KEY: "${QDRANT_API_KEY}"
       QDRANT__SERVICE__ENABLE_DASHBOARD: "true"
 
   # ===== Crawl4AI =====
@@ -214,7 +214,7 @@ services:
     command: ["/bin/sh", "-c", "npm install -g http-server && mkdir -p /app && echo '{\"status\":\"ok\",\"service\":\"crawl4ai\",\"version\":\"1.0\"}' > /app/index.json && http-server /app -p 8000"]
     working_dir: /app
     environment:
-      - JWT_SECRET=${CRAWL4AI_JWT_SECRET}
+      - JWT_SECRET="${CRAWL4AI_JWT_SECRET}"
     expose:
       - "8000"
     networks:
@@ -233,11 +233,11 @@ services:
       start_period: 60s
     environment:
       - WORDPRESS_DB_HOST=wordpress_db
-      - WORDPRESS_DB_USER=${WP_DB_USER}
-      - WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
-      - WORDPRESS_DB_NAME=${WP_DB_NAME}
-      - WORDPRESS_TABLE_PREFIX=${WP_TABLE_PREFIX}
-      - "WORDPRESS_CONFIG_EXTRA=define('WP_MEMORY_LIMIT', '256M'); define('WP_MAX_MEMORY_LIMIT', '512M'); define('WP_HOME', 'https://wordpress.${DOMAIN_NAME}'); define('WP_SITEURL', 'https://wordpress.${DOMAIN_NAME}');"
+      - WORDPRESS_DB_USER="${WP_DB_USER}"
+      - WORDPRESS_DB_PASSWORD="${WP_DB_PASSWORD}"
+      - WORDPRESS_DB_NAME="${WP_DB_NAME}"
+      - WORDPRESS_TABLE_PREFIX="${WP_TABLE_PREFIX}"
+      - WORDPRESS_CONFIG_EXTRA="define('WP_MEMORY_LIMIT', '256M'); define('WP_MAX_MEMORY_LIMIT', '512M'); define('WP_HOME', 'https://wordpress.${DOMAIN_NAME}'); define('WP_SITEURL', 'https://wordpress.${DOMAIN_NAME}');"
     volumes:
       - wordpress_data:/var/www/html
     networks:
@@ -255,15 +255,15 @@ services:
     container_name: wordpress_db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${WP_DB_USER}", "-p${WP_DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u\"${WP_DB_USER}\"", "-p\"${WP_DB_PASSWORD}\""]
       interval: 10s
       timeout: 5s
       retries: 5
     environment:
-      - MYSQL_DATABASE=${WP_DB_NAME}
-      - MYSQL_USER=${WP_DB_USER}
-      - MYSQL_PASSWORD=${WP_DB_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${WP_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE="${WP_DB_NAME}"
+      - MYSQL_USER="${WP_DB_USER}"
+      - MYSQL_PASSWORD="${WP_DB_PASSWORD}"
+      - MYSQL_ROOT_PASSWORD="${WP_DB_ROOT_PASSWORD}"
     volumes:
       - wordpress_db_data:/var/lib/mysql
     networks:
@@ -288,10 +288,10 @@ services:
     environment:
       - WAHA_WORKER_ID=waha
       - WAHA_API_PORT=3000
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
-      - WAHA_API_USERNAME=${WAHA_API_USERNAME:-admin}
-      - WAHA_API_PASSWORD=${WAHA_API_PASSWORD:-changeme123}
-      - WAHA_API_URL=https://waha.${DOMAIN_NAME}
+      - GENERIC_TIMEZONE="${GENERIC_TIMEZONE}"
+      - WAHA_API_USERNAME="${WAHA_API_USERNAME:-admin}"
+      - WAHA_API_PASSWORD="${WAHA_API_PASSWORD:-changeme123}"
+      - WAHA_API_URL="https://waha.${DOMAIN_NAME}"
     volumes:
       - waha_sessions:/app/.sessions
       - waha_media:/app/.media
