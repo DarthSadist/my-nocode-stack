@@ -1,3 +1,92 @@
+#!/bin/bash
+
+# Скрипт для комплексного исправления шаблона docker-compose.yaml
+
+# Цвета для вывода
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+RESET='\033[0m'
+
+# Пути к файлам
+TEMPLATE_FILE="/home/den/my-nocode-stack/docker-compose.yaml.template"
+BACKUP_FILE="/home/den/my-nocode-stack/docker-compose.yaml.template.bak"
+ENV_FILE="/home/den/my-nocode-stack/test-env-temp"
+TEST_OUTPUT="/tmp/docker-compose.yaml.test"
+
+echo -e "${BLUE}====== Исправление шаблона docker-compose.yaml ======${RESET}"
+
+# Создаем резервную копию оригинального файла
+cp "$TEMPLATE_FILE" "$BACKUP_FILE"
+echo -e "${GREEN}Создана резервная копия шаблона: $BACKUP_FILE${RESET}"
+
+# Шаг 1: Исправление экранирования в блоке WordPress
+echo -e "${BLUE}Шаг 1: Исправление экранирования в блоке WordPress${RESET}"
+sed -i 's/test: \["CMD-SHELL", "php -r \"if(@file_get_contents(.*)exit(0); }\""\]/test: ["CMD-SHELL", "php -r '\''if(@file_get_contents(\\"http:\/\/localhost\\") === false) { exit(1); } else { exit(0); }'\''"]/' "$TEMPLATE_FILE"
+echo -e "${GREEN}Исправлено экранирование в блоке WordPress${RESET}"
+
+# Шаг 2: Исправление формата многострочных строк в конфигурации WordPress
+echo -e "${BLUE}Шаг 2: Исправление формата многострочных строк${RESET}"
+sed -i 's/WORDPRESS_CONFIG_EXTRA=|/WORDPRESS_CONFIG_EXTRA: |/' "$TEMPLATE_FILE"
+echo -e "${GREEN}Исправлен формат многострочных строк${RESET}"
+
+# Шаг 3: Исправление переменных в блоке wordpress_db
+echo -e "${BLUE}Шаг 3: Исправление переменных в блоке wordpress_db${RESET}"
+sed -i 's/test: \["CMD", "mysqladmin", "ping", "-h", "localhost", "-u\${WP_DB_USER}", "-p\${WP_DB_PASSWORD}"\]/test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${WP_DB_USER}", "-p${WP_DB_PASSWORD}"]/' "$TEMPLATE_FILE"
+echo -e "${GREEN}Исправлены переменные в блоке wordpress_db${RESET}"
+
+# Шаг 4: Проверка и исправление остальных healthcheck блоков
+echo -e "${BLUE}Шаг 4: Проверка остальных healthcheck блоков${RESET}"
+sed -i 's/"\${/"\$\{/g; s/\${/\$\{/g' "$TEMPLATE_FILE"
+echo -e "${GREEN}Проверены остальные healthcheck блоки${RESET}"
+
+# Шаг 5: Тестирование исправленного шаблона
+echo -e "${BLUE}Шаг 5: Тестирование исправленного шаблона${RESET}"
+
+# Загрузка переменных окружения
+set -a
+source "$ENV_FILE"
+set +a
+
+# Генерация тестового файла
+envsubst < "$TEMPLATE_FILE" > "$TEST_OUTPUT"
+
+# Проверка синтаксиса YAML с помощью Python
+echo -e "${BLUE}Проверка синтаксиса YAML...${RESET}"
+python3 -c '
+import sys
+try:
+    import yaml
+    with open(sys.argv[1], "r") as f:
+        yaml.safe_load(f)
+    print("✅ Синтаксис YAML корректен")
+    sys.exit(0)
+except ImportError:
+    print("⚠️ Python библиотека PyYAML не установлена")
+    sys.exit(2)
+except yaml.YAMLError as e:
+    print(f"❌ Обнаружена ошибка YAML синтаксиса:\n{e}")
+    sys.exit(1)
+except Exception as e:
+    print(f"❌ Неизвестная ошибка:\n{e}")
+    sys.exit(1)
+' "$TEST_OUTPUT"
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ОШИБКА: Исправленный шаблон все еще содержит ошибки YAML${RESET}"
+    echo -e "${YELLOW}Восстанавливаем оригинальный шаблон...${RESET}"
+    cp "$BACKUP_FILE" "$TEMPLATE_FILE"
+    echo -e "${GREEN}Оригинальный шаблон восстановлен${RESET}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Исправленный шаблон успешно прошел валидацию YAML${RESET}"
+
+# Шаг 6: Создание финальной версии шаблона
+echo -e "${BLUE}Шаг 6: Создание финальной версии шаблона${RESET}"
+
+cat > "$TEMPLATE_FILE" << 'EOL'
 version: '3.8'
 
 # Общий docker-compose файл, объединяющий все сервисы
@@ -200,7 +289,7 @@ services:
       - app-network
     environment:
       QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
-      QDRANT__SERVICE__ENABLE_DASHBOARD: "true"
+      QDRANT__SERVICE__ENABLE_DASHBOARD: true
 
   # ===== Crawl4AI =====
   crawl4ai:
@@ -222,7 +311,7 @@ services:
     container_name: wordpress
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "php -r \"if(@file_get_contents('http://localhost') === false) { exit(1); } else { exit(0); }\""]
+      test: ["CMD-SHELL", "php -r 'if(@file_get_contents(\"http://localhost\") === false) { exit(1); } else { exit(0); }'"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -233,7 +322,11 @@ services:
       - WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
       - WORDPRESS_DB_NAME=${WP_DB_NAME}
       - WORDPRESS_TABLE_PREFIX=${WP_TABLE_PREFIX}
-      - "WORDPRESS_CONFIG_EXTRA=define('WP_MEMORY_LIMIT', '256M'); define('WP_MAX_MEMORY_LIMIT', '512M'); define('WP_HOME', 'https://wordpress.${DOMAIN_NAME}'); define('WP_SITEURL', 'https://wordpress.${DOMAIN_NAME}');"
+      - WORDPRESS_CONFIG_EXTRA: |
+          define('WP_MEMORY_LIMIT', '256M');
+          define('WP_MAX_MEMORY_LIMIT', '512M');
+          define('WP_HOME', 'https://wordpress.${DOMAIN_NAME}');
+          define('WP_SITEURL', 'https://wordpress.${DOMAIN_NAME}');
     volumes:
       - wordpress_data:/var/www/html
     networks:
@@ -331,3 +424,42 @@ services:
       - apparmor:unconfined
     networks:
       - app-network
+EOL
+
+echo -e "${GREEN}✅ Создан полностью новый шаблон без ошибок${RESET}"
+
+# Повторная проверка
+echo -e "${BLUE}Шаг 7: Финальная проверка нового шаблона${RESET}"
+
+# Генерация тестового файла
+envsubst < "$TEMPLATE_FILE" > "$TEST_OUTPUT"
+
+# Проверка с помощью Python
+python3 -c '
+import sys
+try:
+    import yaml
+    with open(sys.argv[1], "r") as f:
+        yaml.safe_load(f)
+    print("✅ Финальная проверка: Синтаксис YAML корректен")
+    sys.exit(0)
+except Exception as e:
+    print(f"❌ Финальная проверка: Обнаружена ошибка YAML:\n{e}")
+    sys.exit(1)
+' "$TEST_OUTPUT"
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ОШИБКА: Финальный шаблон все еще содержит ошибки${RESET}"
+    echo -e "${YELLOW}Восстанавливаем оригинальный шаблон...${RESET}"
+    cp "$BACKUP_FILE" "$TEMPLATE_FILE"
+    echo -e "${GREEN}Оригинальный шаблон восстановлен${RESET}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Финальный шаблон успешно прошел проверку YAML${RESET}"
+echo -e "${BLUE}====== Исправление шаблона docker-compose.yaml завершено ======${RESET}"
+echo -e "${GREEN}Теперь установка должна пройти без ошибок YAML${RESET}"
+
+# Сохраняем копию исправленного шаблона
+cp "$TEMPLATE_FILE" "/home/den/my-nocode-stack/docker-compose.yaml.template.fixed"
+echo -e "${GREEN}Сохранена копия исправленного шаблона: /home/den/my-nocode-stack/docker-compose.yaml.template.fixed${RESET}"
