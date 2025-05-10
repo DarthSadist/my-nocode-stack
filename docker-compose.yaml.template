@@ -67,10 +67,11 @@ services:
       - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
       - N8N_HOST=n8n.${DOMAIN_NAME}
       - N8N_PROTOCOL=https
-      - N8N_PORT=5678
+      - N8N_SKIP_WEBHOOK_PORT_PREFIX_FOR_MAIN_URL=true
       - N8N_WEBHOOK_URL=https://n8n.${DOMAIN_NAME}
       - N8N_WEBHOOK_TUNNEL_URL=https://n8n.${DOMAIN_NAME}
-      - N8N_SKIP_WEBHOOK_PORT_PREFIX_FOR_MAIN_URL=true
+      - N8N_PORT=5678
+      - N8N_ENDPOINT_WEBHOOK_TUNNEL=webhook
       - N8N_RUNNERS_ENABLED=true
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
@@ -161,7 +162,7 @@ services:
 
   # ===== Flowise =====
   flowise:
-    image: flowiseai/flowise:1.4.12
+    image: flowiseai/flowise:latest
     restart: unless-stopped
     container_name: flowise
     healthcheck:
@@ -175,6 +176,9 @@ services:
       - FLOWISE_USERNAME=${FLOWISE_USERNAME}
       - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
       - SERVER_URL=https://flowise.${DOMAIN_NAME}
+      - HOST=0.0.0.0
+    ports:
+      - "3001"
     volumes:
       - flowise_data:/root/.flowise
     networks:
