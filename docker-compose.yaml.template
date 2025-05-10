@@ -1,0 +1,278 @@
+version: '3.8'
+
+# Общий docker-compose файл, объединяющий все сервисы
+
+volumes:
+  # n8n volumes
+  n8n_data:
+    external: true
+  n8n_redis_data:
+    external: true
+  n8n_postgres_data:
+    external: true
+  # caddy volumes
+  caddy_data:
+    external: true
+  caddy_config:
+    external: true
+  # flowise volumes
+  flowise_data:
+    external: true
+  # qdrant volumes
+  qdrant_storage:
+    external: true
+  # wordpress volumes
+  wordpress_data:
+    external: true
+  wordpress_db_data:
+    external: true
+  # waha volumes
+  waha_sessions:
+    external: true
+  waha_media:
+    external: true
+  # netdata volumes
+  netdataconfig:
+    external: true
+  netdatalib:
+    external: true
+  netdatacache:
+    external: true
+
+networks:
+  app-network:
+    external: true
+    name: app-network
+
+services:
+  # ===== N8N and its dependencies =====
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    environment:
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_USER_MANAGEMENT_DISABLED=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_USER_MANAGEMENT_JWT_SECRET}
+      - N8N_DEFAULT_USER_EMAIL=${N8N_DEFAULT_USER_EMAIL}
+      - N8N_DEFAULT_USER_PASSWORD=${N8N_DEFAULT_USER_PASSWORD}
+      - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+      - N8N_HOST=n8n.${DOMAIN_NAME}
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      - N8N_WEBHOOK_URL=https://n8n.${DOMAIN_NAME}
+      - N8N_WEBHOOK_TUNNEL_URL=https://n8n.${DOMAIN_NAME}
+      - N8N_RUNNERS_ENABLED=true
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - QUEUE_BULL_REDIS_HOST=n8n_redis
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+      - n8n_redis
+
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - n8n_postgres_data:/var/lib/postgresql/data
+      - /opt/pgvector-init.sql:/docker-entrypoint-initdb.d/pgvector-init.sql:ro
+    networks:
+      - app-network
+
+  n8n_redis:
+    image: redis:alpine
+    container_name: n8n_redis
+    restart: unless-stopped
+    volumes:
+      - n8n_redis_data:/data
+    networks:
+      - app-network
+
+  # ===== Adminer =====
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    restart: unless-stopped
+    ports:
+      - "8080"
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+
+  # ===== Caddy (обратный прокси) =====
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /opt/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app-network
+
+  # ===== Flowise =====
+  flowise:
+    image: flowiseai/flowise
+    restart: unless-stopped
+    container_name: flowise
+    environment:
+      - PORT=3001
+      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+      - SERVER_URL=https://flowise.${DOMAIN_NAME}
+    volumes:
+      - flowise_data:/root/.flowise
+    networks:
+      - app-network
+
+  # ===== Qdrant =====
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
+    ports:
+      - "6333"
+      - "6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    networks:
+      - app-network
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+      QDRANT__SERVICE__ENABLE_DASHBOARD: true
+
+  # ===== Crawl4AI =====
+  crawl4ai:
+    image: node:18-alpine
+    container_name: crawl4ai
+    restart: unless-stopped
+    command: ["/bin/sh", "-c", "npm install -g http-server && mkdir -p /app && echo '{\"status\":\"ok\",\"service\":\"crawl4ai\",\"version\":\"1.0\"}' > /app/index.json && http-server /app -p 8000"]
+    working_dir: /app
+    environment:
+      - JWT_SECRET=${CRAWL4AI_JWT_SECRET}
+    expose:
+      - "8000"
+    networks:
+      - app-network
+
+  # ===== WordPress =====
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    restart: unless-stopped
+    environment:
+      - WORDPRESS_DB_HOST=wordpress_db
+      - WORDPRESS_DB_USER=${WP_DB_USER}
+      - WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
+      - WORDPRESS_DB_NAME=${WP_DB_NAME}
+      - WORDPRESS_TABLE_PREFIX=${WP_TABLE_PREFIX}
+      - WORDPRESS_CONFIG_EXTRA=
+        define('WP_MEMORY_LIMIT', '256M');
+        define('WP_MAX_MEMORY_LIMIT', '512M');
+        define('WP_HOME', 'https://wordpress.${DOMAIN_NAME}');
+        define('WP_SITEURL', 'https://wordpress.${DOMAIN_NAME}');
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - app-network
+    depends_on:
+      - wordpress_db
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  wordpress_db:
+    image: mariadb:10.6
+    container_name: wordpress_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=${WP_DB_NAME}
+      - MYSQL_USER=${WP_DB_USER}
+      - MYSQL_PASSWORD=${WP_DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${WP_DB_ROOT_PASSWORD}
+    volumes:
+      - wordpress_db_data:/var/lib/mysql
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # ===== Waha =====
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: waha
+    restart: unless-stopped
+    environment:
+      - WAHA_WORKER_ID=waha
+      - WAHA_API_PORT=3000
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - WAHA_API_USERNAME=${WAHA_API_USERNAME:-admin}
+      - WAHA_API_PASSWORD=${WAHA_API_PASSWORD:-changeme123}
+      - WAHA_API_URL=https://waha.${DOMAIN_NAME}
+    volumes:
+      - waha_sessions:/app/.sessions
+      - waha_media:/app/.media
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # ===== Watchtower =====
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --schedule "0 0 4 * * *" --cleanup
+    restart: always
+
+  # ===== Netdata =====
+  netdata:
+    image: netdata/netdata:latest
+    container_name: netdata
+    volumes:
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    networks:
+      - app-network

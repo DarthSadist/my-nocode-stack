@@ -17,6 +17,9 @@ VOLUMES=(
     "wordpress_db_data" # For WordPress database
     "waha_sessions"     # For Waha WhatsApp sessions
     "waha_media"        # For Waha media files
+    "netdataconfig"     # Для хранения конфигурации Netdata
+    "netdatalib"        # Для хранения данных Netdata
+    "netdatacache"      # Для кеша Netdata
 )
 
 FAILED_VOLUMES=0

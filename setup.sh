@@ -107,7 +107,7 @@ main() {
   # Step 6: Template creation
   show_progress "Step 6/8: Configuration file creation"
   # Pass both DOMAIN_NAME and USER_EMAIL for Caddyfile processing
-  ./setup-files/05-create-templates.sh "$DOMAIN_NAME" "$USER_EMAIL"
+  ./setup-files/05-create-unified-templates.sh "$DOMAIN_NAME" "$USER_EMAIL"
   check_success "configuration file creation"
   
   # Step 7: Firewall setup
@@ -140,7 +140,7 @@ main() {
   
   # Step 8: Service launch
   show_progress "Step 8/8: Service launch"
-  ./setup-files/07-start-services.sh
+  ./setup-files/07-start-unified-services.sh
   check_success "service launch"
   
   # Load generated passwords for final display

@@ -1,13 +1,22 @@
 #!/bin/bash
 
 # Получаем значения переменных из файла .env
-if [ -f "/home/den/my-nocode-stack/.env" ]; then
-    source /home/den/my-nocode-stack/.env
-    echo "Загружены переменные из .env"
+if [ -f "/opt/.env" ]; then
+    source /opt/.env
+    echo "Загружены переменные из /opt/.env"
+elif [ -f "$(pwd)/.env" ]; then
+    source "$(pwd)/.env"
+    echo "Загружены переменные из локального .env"
 else
-    echo "Файл .env не найден, используем значения по умолчанию"
-    DOMAIN_NAME="flowdarth.ru"
-    USER_EMAIL="m4594863@gmail.com"
+    echo "❌ Файл .env не найден ни в /opt/, ни в текущей директории"
+    echo "Пожалуйста, укажите доменное имя и email вручную:"
+    read -p "Введите доменное имя: " DOMAIN_NAME
+    read -p "Введите email: " USER_EMAIL
+    
+    if [ -z "$DOMAIN_NAME" ] || [ -z "$USER_EMAIL" ]; then
+        echo "❌ Необходимо указать доменное имя и email"
+        exit 1
+    fi
 fi
 
 # Создаем новый Caddyfile из шаблона
