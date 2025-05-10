@@ -76,9 +76,9 @@ services:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE="${POSTGRES_DB}"
-      - DB_POSTGRESDB_USER="${POSTGRES_USER}"
-      - DB_POSTGRESDB_PASSWORD="${POSTGRES_PASSWORD}"
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
       - GENERIC_TIMEZONE="${GENERIC_TIMEZONE}"
       - QUEUE_BULL_REDIS_HOST=n8n_redis
     volumes:
@@ -94,15 +94,15 @@ services:
     container_name: postgres
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"${POSTGRES_USER}\""]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
     environment:
-      - POSTGRES_DB="${POSTGRES_DB}"
-      - POSTGRES_USER="${POSTGRES_USER}"
-      - POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - n8n_postgres_data:/var/lib/postgresql/data
       - /opt/pgvector-init.sql:/docker-entrypoint-initdb.d/pgvector-init.sql:ro
@@ -233,10 +233,10 @@ services:
       start_period: 60s
     environment:
       - WORDPRESS_DB_HOST=wordpress_db
-      - WORDPRESS_DB_USER="${WP_DB_USER}"
-      - WORDPRESS_DB_PASSWORD="${WP_DB_PASSWORD}"
-      - WORDPRESS_DB_NAME="${WP_DB_NAME}"
-      - WORDPRESS_TABLE_PREFIX="${WP_TABLE_PREFIX}"
+      - WORDPRESS_DB_USER=${WP_DB_USER}
+      - WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
+      - WORDPRESS_DB_NAME=${WP_DB_NAME}
+      - WORDPRESS_TABLE_PREFIX=${WP_TABLE_PREFIX}
       - WORDPRESS_CONFIG_EXTRA="define('WP_MEMORY_LIMIT', '256M'); define('WP_MAX_MEMORY_LIMIT', '512M'); define('WP_HOME', 'https://wordpress.${DOMAIN_NAME}'); define('WP_SITEURL', 'https://wordpress.${DOMAIN_NAME}');"
     volumes:
       - wordpress_data:/var/www/html
@@ -255,15 +255,15 @@ services:
     container_name: wordpress_db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u\"${WP_DB_USER}\"", "-p\"${WP_DB_PASSWORD}\""]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${WP_DB_USER}", "-p${WP_DB_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
     environment:
-      - MYSQL_DATABASE="${WP_DB_NAME}"
-      - MYSQL_USER="${WP_DB_USER}"
-      - MYSQL_PASSWORD="${WP_DB_PASSWORD}"
-      - MYSQL_ROOT_PASSWORD="${WP_DB_ROOT_PASSWORD}"
+      - MYSQL_DATABASE=${WP_DB_NAME}
+      - MYSQL_USER=${WP_DB_USER}
+      - MYSQL_PASSWORD=${WP_DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${WP_DB_ROOT_PASSWORD}
     volumes:
       - wordpress_db_data:/var/lib/mysql
     networks:
